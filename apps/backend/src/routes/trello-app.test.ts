@@ -42,6 +42,7 @@ const saved = {
   publicBackendUrl: config.agent.publicBackendUrl,
   backendUrl: config.agent.backendUrl,
   authBaseUrl: config.auth.publicBaseUrl,
+  podNamespace: config.otel.podNamespace,
   deferred: config.byos.connectorOAuthDeferredBind,
 }
 
@@ -132,12 +133,13 @@ beforeEach(() => {
 })
 afterEach(() => {
   globalThis.fetch = realFetch
-  const { publicBackendUrl, backendUrl, authBaseUrl, deferred, ...composio } = saved
+  const { publicBackendUrl, backendUrl, authBaseUrl, podNamespace, deferred, ...composio } = saved
 
   Object.assign(config.byos.composio, composio)
   config.agent.publicBackendUrl = publicBackendUrl
   config.agent.backendUrl = backendUrl
   config.auth.publicBaseUrl = authBaseUrl
+  Object.assign(config.otel, { podNamespace })
   config.byos.connectorOAuthDeferredBind = deferred
 })
 
@@ -183,6 +185,15 @@ describe('Trello managed OAuth lifecycle', () => {
   test('falls back to the auth origin when the runtime backend URL is internal', async () => {
     config.agent.publicBackendUrl = undefined
     config.agent.backendUrl = 'http://nuphos-backend.prod.svc:3000'
+    config.auth.publicBaseUrl = 'https://auth.example'
+    const { state } = await start()
+
+    expect(callbackUrls).toEqual([`https://auth.example/trello-app/setup?state=${state}`])
+  })
+  test('falls back to the HTTPS auth origin when the runtime URL is HTTP loopback', async () => {
+    Object.assign(config.otel, { podNamespace: undefined })
+    config.agent.publicBackendUrl = undefined
+    config.agent.backendUrl = 'http://localhost:3000'
     config.auth.publicBaseUrl = 'https://auth.example'
     const { state } = await start()
 

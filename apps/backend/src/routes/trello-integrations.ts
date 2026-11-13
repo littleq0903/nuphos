@@ -54,9 +54,10 @@ trelloIntegrationsRoutes.post('/start-oauth', requireTeamRole('ADMINISTRATOR'), 
   const requesterUserId = c.get('userId')
   const state = randomBytes(24).toString('hex')
   const expiresAt = new Date(Date.now() + 10 * 60_000)
-  const base =
-    publicBackendUrl() ??
-    pickPublicBackendUrl({ port: config.port, publicBackendUrl: config.auth.publicBaseUrl })
+  const primary = publicBackendUrl()
+  const base = primary?.startsWith('https://')
+    ? primary
+    : pickPublicBackendUrl({ port: config.port, publicBackendUrl: config.auth.publicBaseUrl })
 
   if (!base?.startsWith('https://'))
     throw new AppError(503, 'trello_not_configured', 'A public HTTPS backend URL is required')
